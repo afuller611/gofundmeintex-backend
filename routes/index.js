@@ -11,13 +11,14 @@ router.get('/test', (req, res, next) => {
 //Get all campaign details based on campaign ID
 router.get('/campaign/:campaignId', (req, res, next) => {
     runQuery(SQL`SELECT * FROM Campaigns WHERE campaign_id = ${req.params.campaignId}`).then((response) => {
-        // runQuery(SQL`SELECT * FROM Updates WHERE campaign_id =${req.params.campaignId}`).then((updateRespone) => {
-            res.status(200).json({ ...response[0], 
-                // updates: updateRespone 
+        runQuery(SQL`SELECT * FROM Updates WHERE campaign_id =${req.params.campaignId}`).then((updateRespone) => {
+            res.status(200).json({
+                ...response[0],
+                updates: updateRespone
             })
-        // }).catch((err) => {
-        //     console.log(err)
-        // })
+        }).catch((err) => {
+            console.log(err)
+        })
     }).catch((err) => {
         console.log(err)
     })
@@ -50,7 +51,7 @@ router.get('/testGetCampaigns', (req, res, next) => {
 })
 
 router.get('/test', (req, res, next) => {
-    res.status(200).json({success: true, message: "you hit el servero"})
+    res.status(200).json({ success: true, message: "you hit el servero" })
 })
 
 module.exports = router;
