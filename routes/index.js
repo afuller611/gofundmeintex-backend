@@ -49,4 +49,8 @@ router.get('/testGetCampaigns', (req, res, next) => {
 
 })
 
+router.get('/test', (req, res, next) => {
+    res.status(200).json({success: true, message: "you hit el servero"})
+})
+
 module.exports = router;
