@@ -41,7 +41,7 @@ const runQuery = (query) => new Promise((resolve, reject) => {
 
 const searchQuery = (title, description, firstName, lastName) => new Promise((resolve, reject) => {
     sequelize.query(
-        `SELECT TOP 1000 * FROM Campaigns WHERE 
+        `SELECT TOP 200 * FROM Campaigns WHERE 
         title like :title 
         AND
         description like :description
