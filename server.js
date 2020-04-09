@@ -8,13 +8,13 @@ const morgan = require("morgan");
 
 require('dotenv').config()
 
-app.use(bodyParser.json());
+app.use(bodyParser.json()); //Give us req.body
 
-app.use(cors())
-app.use(morgan('dev')); // Logs events to console (dev)
+app.use(cors()) // Enable CORS
+app.use(morgan('dev')); // Logs events to console
 
+//All routes will go through here
 app.use('/api', apiroutes)
-// app.get('/', (req, res) => res.send('Hello World!'))
 
 app.listen(process.env.PORT || port, () => console.log(`Listening at port ${process.env.PORT || port}`))
 
