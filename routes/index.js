@@ -61,7 +61,7 @@ router.post('/searchCampaigns', (req, res, next) => {
 
 })
 
-//Get confidence based on certain attributes of a campaign (might need to make this a common function to be used with "getCampaign")
+//Get confidence based on certain attributes of a campaign
 router.post('/analyzeCampaign/english', (req, res, next) => {
     analyzeEnglishCampaign(req.body).then((percentPerDay) => {
         res.status(200).json(percentPerDay)
@@ -81,7 +81,7 @@ router.post('/analyzeCampaign/italian', (req, res, next) => {
 
 
 
-
+//Give user admin rights so they can do searches
 router.post('/becomeAdmin', (req, res, next) => {
 
     const body = `{"client_id":"gAOC1UuXf05qYgFvqKQfr12wgjXi79fM","client_secret":${process.env.AUTH0_CLIENT_SECRET},"audience":"https://gofundmeintex.auth0.com/api/v2/","grant_type":"client_credentials"}`
@@ -110,6 +110,8 @@ router.post('/becomeAdmin', (req, res, next) => {
     })
 })
 
+
+//hit AZURE ML Studio for english campaigns
 const analyzeEnglishCampaign = (body) => {
     return new Promise((resolve, reject) => {
         let azureRequestBody = {
@@ -163,7 +165,7 @@ const analyzeEnglishCampaign = (body) => {
     })
 }
 
-
+//hit AZURE ML Studio for italian campaigns
 const analyzeItalianCampaign = (body) => {
     return new Promise((resolve, reject) => {
         let azureRequestBody = {
