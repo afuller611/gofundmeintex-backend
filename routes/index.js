@@ -7,10 +7,6 @@ const axios = require('axios')
 require('dotenv').config()
 
 
-router.get('/test', (req, res, next) => {
-    res.status(200).json({ id: "123" })
-})
-
 //Get all campaign details based on campaign ID
 router.get('/campaign/:campaignId', (req, res, next) => {
     runQuery(SQL`SELECT * FROM Campaigns WHERE campaign_id = ${req.params.campaignId}`).then((response) => {
@@ -21,15 +17,16 @@ router.get('/campaign/:campaignId', (req, res, next) => {
             })
         }).catch((err) => {
             console.log(err)
+            next(err)
         })
     }).catch((err) => {
         console.log(err)
+        res.status(500).send()
     })
 
 })
 
-//Get campaigns based on search - What are our search parameters going to be?
-
+//Get Campaigns based on search parameters
 router.post('/searchCampaigns', (req, res, next) => {
     searchQuery(req.body.title || "", req.body.description || "", req.body.firstName || "", req.body.lastName || "").then((response) => {
         res.status(200).json(response)
@@ -40,23 +37,7 @@ router.post('/searchCampaigns', (req, res, next) => {
 
 })
 
-
 //Get confidence based on certain attributes of a campaign (might need to make this a common function to be used with "getCampaign")
-
-
-router.get('/testGetCampaigns', (req, res, next) => {
-    runQuery(SQL`SELECT TOP 1000 * FROM Campaigns`).then((response) => {
-        res.status(200).json(response)
-    }).catch((err) => {
-        console.log(err)
-    })
-
-})
-
-router.get('/test', (req, res, next) => {
-    res.status(200).json({ success: true, message: "you hit el servero" })
-})
-
 router.post('/analyzeCampaign', (req, res, next) => {
     let azureRequestBody = {
         "Inputs": {
@@ -102,6 +83,34 @@ router.post('/analyzeCampaign', (req, res, next) => {
     }).then((azureResponse) => {
         const percentPerDay = (parseFloat(azureResponse.data.Results.output1.value.Values[0][0]) * 100).toString()
         res.status(200).json(percentPerDay)
+    }).catch((err) => {
+        console.log(err)
+        res.status(500).send()
+    })
+})
+
+router.post('/becomeAdmin', (req, res, next) => {
+
+    const body = '{"client_id":"gAOC1UuXf05qYgFvqKQfr12wgjXi79fM","client_secret":"qoIM314inhn0gBSZIYS06X96GjDNw9nrN96Wa3UehaRZ1RWyk-PkuNrecfvUp92b","audience":"https://gofundmeintex.auth0.com/api/v2/","grant_type":"client_credentials"}'
+
+    axios.post(`${process.env.AUTH0_DOMAIN}/oauth/token`, body, {
+        headers: {
+            'content-type': 'application/json'
+        }
+    }).then((tokenResponse) => {
+        axios.post(`${process.env.AUTH0_DOMAIN}/api/v2/users/${req.body.userId}/roles`, { roles: ['rol_PDYHow4i7JhThTBX'] }, {
+
+            headers: {
+                'content-type': 'application/json',
+                Authorization: `Bearer ${tokenResponse.data.access_token}`,
+                'cache-control': 'no-cache',
+            },
+        }).then((auth0Response) => {
+            res.status(200).send()
+        }).catch((err) => {
+            console.log(err)
+            res.status(500).send()
+        })
     }).catch((err) => {
         console.log(err)
         res.status(500).send()
