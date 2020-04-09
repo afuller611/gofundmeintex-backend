@@ -42,7 +42,7 @@ router.get('/campaign/:campaignId', async (req, res, next) => {
         res.status(200).json({
             ...campaign,
             updates,
-            score,
+            score: score,
             language: language.charAt(0).toUpperCase() + language.substr(1)
         })
     } catch (err) {
@@ -64,7 +64,7 @@ router.post('/searchCampaigns', (req, res, next) => {
 //Get confidence based on certain attributes of a campaign (might need to make this a common function to be used with "getCampaign")
 router.post('/analyzeCampaign/english', (req, res, next) => {
     analyzeEnglishCampaign(req.body).then((percentPerDay) => {
-        res.status(200).send(percentPerDay)
+        res.status(200).json(percentPerDay)
     }).catch((err) => {
         res.status(500).send()
     })
@@ -72,7 +72,7 @@ router.post('/analyzeCampaign/english', (req, res, next) => {
 
 router.post('/analyzeCampaign/italian', (req, res, next) => {
     analyzeItalianCampaign(req.body).then((percentPerDay) => {
-        res.status(200).send(percentPerDay)
+        res.status(200).json(percentPerDay)
     }).catch((err) => {
         res.status(500).send()
     })
