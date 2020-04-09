@@ -4,26 +4,50 @@ const { runQuery, searchQuery } = require('../db.js')
 const SQL = require('sql-template-strings')
 const SqlString = require('sqlstring')
 const axios = require('axios')
+const LanguageDetect = require('languagedetect');
+const lngDetector = new LanguageDetect();
 require('dotenv').config()
 
 
 //Get all campaign details based on campaign ID
-router.get('/campaign/:campaignId', (req, res, next) => {
-    runQuery(SQL`SELECT * FROM Campaigns WHERE campaign_id = ${req.params.campaignId}`).then((response) => {
-        runQuery(SQL`SELECT * FROM Updates WHERE campaign_id =${req.params.campaignId}`).then((updateRespone) => {
-            res.status(200).json({
-                ...response[0],
-                updates: updateRespone
-            })
-        }).catch((err) => {
-            console.log(err)
-            next(err)
-        })
-    }).catch((err) => {
-        console.log(err)
-        res.status(500).send()
-    })
+router.get('/campaign/:campaignId', async (req, res, next) => {
+    try {
+        let campaigns = await runQuery(SQL`SELECT * FROM Campaigns WHERE campaign_id = ${req.params.campaignId}`)
 
+        let updates = await runQuery(SQL`SELECT * FROM Updates WHERE campaign_id =${req.params.campaignId}`)
+
+        let campaign = campaigns[0]
+        let body = {
+            goal: campaign.goal,
+            description: campaign.description,
+            title: campaign.title,
+            currencyCode: campaign.currencycode,
+            category: campaign.real_category,
+            categoryId: campaign.categoryId,
+            autoFbPost: campaign.aut0_fb_post_mode,
+            isCharity: campaign.is_charity,
+            visibleInSearch: campaign.visible_in_search,
+            mediaType: campaign.media_type,
+            hasBeneficiary: campaign.has_beneficiary
+        }
+
+        let languageArray = lngDetector.detect(campaign.title + " " + campaign.description, 1)
+        let language = languageArray[0][0]
+        let score = ""
+        if (language === "italian") {
+            score = await analyzeItalianCampaign(body)
+        } else {
+            score = await analyzeEnglishCampaign(body)
+        }
+        res.status(200).json({
+            ...campaign,
+            updates,
+            score,
+            language: language.charAt(0).toUpperCase() + language.substr(1)
+        })
+    } catch (err) {
+        res.status(500).send()
+    }
 })
 
 //Get Campaigns based on search parameters
@@ -39,97 +63,17 @@ router.post('/searchCampaigns', (req, res, next) => {
 
 //Get confidence based on certain attributes of a campaign (might need to make this a common function to be used with "getCampaign")
 router.post('/analyzeCampaign/english', (req, res, next) => {
-    let azureRequestBody = {
-        "Inputs": {
-            "input1": {
-                "ColumnNames": [
-                    "auto_fb_post_mode",
-                    "currencycode",
-                    "goal",
-                    "title",
-                    "description",
-                    "media_type",
-                    "visible_in_search",
-                    "is_charity",
-                    "real_category",
-                    "title_len",
-                    "desc_len",
-                    "amount/goal/days"
-                ],
-                "Values": [
-                    [
-                        req.body.autoFbPost ? 1 : 0,
-                        req.body.currencyCode,
-                        req.body.goal,
-                        req.body.title,
-                        req.body.description,
-                        req.body.mediaType || 0,
-                        req.body.visibleInSearch ? 1 : 0,
-                        req.body.isCharity ? 1 : 0,
-                        req.body.category,
-                        req.body.title.length,
-                        req.body.description.length,
-                        null
-                    ],
-                ]
-            }
-        },
-        "GlobalParameters": {}
-    }
-    axios.post(process.env.AZURE_ML_URL_ENGLISH, azureRequestBody, {
-        headers: {
-            "Authorization": `Bearer ${process.env.AZURE_ML_API_KEY_ENGLISH}`
-        }
-    }).then((azureResponse) => {
-        const percentPerDay = (parseFloat(azureResponse.data.Results.output1.value.Values[0][0]) * 100).toString()
-        res.status(200).json(percentPerDay)
+    analyzeEnglishCampaign(req.body).then((percentPerDay) => {
+        res.status(200).send(percentPerDay)
     }).catch((err) => {
-        console.log(err)
         res.status(500).send()
     })
 })
 
 router.post('/analyzeCampaign/italian', (req, res, next) => {
-    let azureRequestBody = {
-        "Inputs": {
-            "input1": {
-                "ColumnNames": [
-                    "auto_fb_post_mode",
-                    "goal",
-                    "title",
-                    "description",
-                    "has_beneficiary",
-                    "media_type",
-                    "visible_in_search",
-                    "title_len",
-                    "desc_len"
-                ],
-                "Values": [
-                    [
-                        req.body.autoFbPost ? 1 : 0,
-                        req.body.goal,
-                        req.body.title,
-                        req.body.description,
-                        req.body.hasBeneficiary ? 1 : 0,
-                        req.body.mediaType || 0,
-                        req.body.visibleInSearch ? 1 : 0,
-                        req.body.title.length,
-                        req.body.description.length,
-                    ],
-                ]
-            }
-        },
-        "GlobalParameters": {}
-    }
-    axios.post(process.env.AZURE_ML_URL_ITALIAN, azureRequestBody, {
-        headers: {
-            "Authorization": `Bearer ${process.env.AZURE_ML_API_KEY_ITALIAN}`
-        }
-    }).then((azureResponse) => {
-        const percentPerDay = (parseFloat(azureResponse.data.Results.output1.value.Values[0][0]) * 100).toString()
-        res.status(200).json(percentPerDay)
+    analyzeItalianCampaign(req.body).then((percentPerDay) => {
+        res.status(200).send(percentPerDay)
     }).catch((err) => {
-        console.log(err)
         res.status(500).send()
     })
 })
@@ -154,7 +98,7 @@ router.post('/becomeAdmin', (req, res, next) => {
                 Authorization: `Bearer ${tokenResponse.data.access_token}`,
                 'cache-control': 'no-cache',
             },
-        }).then((auth0Response) => {
+        }).then(() => {
             res.status(200).send()
         }).catch((err) => {
             console.log(err)
@@ -165,5 +109,106 @@ router.post('/becomeAdmin', (req, res, next) => {
         res.status(500).send()
     })
 })
+
+const analyzeEnglishCampaign = (body) => {
+    return new Promise((resolve, reject) => {
+        let azureRequestBody = {
+            "Inputs": {
+                "input1": {
+                    "ColumnNames": [
+                        "auto_fb_post_mode",
+                        "currencycode",
+                        "goal",
+                        "title",
+                        "description",
+                        "media_type",
+                        "visible_in_search",
+                        "is_charity",
+                        "real_category",
+                        "title_len",
+                        "desc_len",
+                        "amount/goal/days"
+                    ],
+                    "Values": [
+                        [
+                            body.autoFbPost ? 1 : 0,
+                            body.currencyCode,
+                            body.goal,
+                            body.title,
+                            body.description,
+                            body.mediaType || 0,
+                            body.visibleInSearch ? 1 : 0,
+                            body.isCharity ? 1 : 0,
+                            body.category,
+                            body.title.length,
+                            body.description.length,
+                            null
+                        ],
+                    ]
+                }
+            },
+            "GlobalParameters": {}
+        }
+        axios.post(process.env.AZURE_ML_URL_ENGLISH, azureRequestBody, {
+            headers: {
+                "Authorization": `Bearer ${process.env.AZURE_ML_API_KEY_ENGLISH}`
+            }
+        }).then((azureResponse) => {
+            const percentPerDay = (parseFloat(azureResponse.data.Results.output1.value.Values[0][0]) * 100).toString()
+            resolve(percentPerDay)
+        }).catch((err) => {
+            console.log(err)
+            reject(err)
+        })
+    })
+}
+
+
+const analyzeItalianCampaign = (body) => {
+    return new Promise((resolve, reject) => {
+        let azureRequestBody = {
+            "Inputs": {
+                "input1": {
+                    "ColumnNames": [
+                        "auto_fb_post_mode",
+                        "goal",
+                        "title",
+                        "description",
+                        "has_beneficiary",
+                        "media_type",
+                        "visible_in_search",
+                        "title_len",
+                        "desc_len"
+                    ],
+                    "Values": [
+                        [
+                            body.autoFbPost ? 1 : 0,
+                            body.goal,
+                            body.title,
+                            body.description,
+                            body.hasBeneficiary ? 1 : 0,
+                            body.mediaType || 0,
+                            body.visibleInSearch ? 1 : 0,
+                            body.title.length,
+                            body.description.length,
+                        ],
+                    ]
+                }
+            },
+            "GlobalParameters": {}
+        }
+        axios.post(process.env.AZURE_ML_URL_ITALIAN, azureRequestBody, {
+            headers: {
+                "Authorization": `Bearer ${process.env.AZURE_ML_API_KEY_ITALIAN}`
+            }
+        }).then((azureResponse) => {
+            const percentPerDay = (parseFloat(azureResponse.data.Results.output1.value.Values[0][0]) * 100).toString()
+            resolve(percentPerDay)
+        }).catch((err) => {
+            console.log(err)
+            reject(err)
+        })
+    })
+}
 
 module.exports = router;
