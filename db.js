@@ -3,10 +3,7 @@ const { QueryTypes } = require('sequelize');
 require('dotenv').config()
 
 const sequelize = new Sequelize(process.env.DB_NAME, process.env.DB_USERNAME, process.env.DB_PASSWORD, {
-// const sequelize = new Sequelize("Intex-Two", "jand", "Ernie2020", {
     host: process.env.DB_SERVER,
-// const sequelize = new Sequelize("shared", "mkshared", "Share0ata", {
-//     host: "http://mkshared.database.windows.net",
     dialect: "mssql",
     dialectOptions: {
         options: {

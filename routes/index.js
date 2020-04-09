@@ -77,14 +77,14 @@ router.post('/analyzeCampaign', (req, res, next) => {
                 ],
                 "Values": [
                     [
-                        req.body.autoFbPost || 0,
+                        req.body.autoFbPost ? 1 : 0,
                         req.body.currencyCode,
                         req.body.goal,
                         req.body.title,
                         req.body.description,
                         req.body.mediaType || 0,
-                        req.body.visibleInSearch || 0,
-                        req.body.isCharity || 0,
+                        req.body.visibleInSearch ? 1 : 0,
+                        req.body.isCharity ? 1 : 0,
                         req.body.category,
                         req.body.title.length,
                         req.body.description.length,
@@ -97,10 +97,10 @@ router.post('/analyzeCampaign', (req, res, next) => {
     }
     axios.post(process.env.AZURE_ML_URL, azureRequestBody, {
         headers: {
-            "Authorization" : `Bearer ${process.env.AZURE_ML_API_KEY}`
+            "Authorization": `Bearer ${process.env.AZURE_ML_API_KEY}`
         }
     }).then((azureResponse) => {
-        const percentPerDay = parseFloat(azureResponse.data.Results.output1.value.Values[0][0]) * 100
+        const percentPerDay = (parseFloat(azureResponse.data.Results.output1.value.Values[0][0]) * 100).toString()
         res.status(200).json(percentPerDay)
     }).catch((err) => {
         console.log(err)
