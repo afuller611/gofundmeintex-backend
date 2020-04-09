@@ -38,7 +38,7 @@ router.post('/searchCampaigns', (req, res, next) => {
 })
 
 //Get confidence based on certain attributes of a campaign (might need to make this a common function to be used with "getCampaign")
-router.post('/analyzeCampaign', (req, res, next) => {
+router.post('/analyzeCampaign/english', (req, res, next) => {
     let azureRequestBody = {
         "Inputs": {
             "input1": {
@@ -76,9 +76,9 @@ router.post('/analyzeCampaign', (req, res, next) => {
         },
         "GlobalParameters": {}
     }
-    axios.post(process.env.AZURE_ML_URL, azureRequestBody, {
+    axios.post(process.env.AZURE_ML_URL_ENGLISH, azureRequestBody, {
         headers: {
-            "Authorization": `Bearer ${process.env.AZURE_ML_API_KEY}`
+            "Authorization": `Bearer ${process.env.AZURE_ML_API_KEY_ENGLISH}`
         }
     }).then((azureResponse) => {
         const percentPerDay = (parseFloat(azureResponse.data.Results.output1.value.Values[0][0]) * 100).toString()
@@ -88,6 +88,55 @@ router.post('/analyzeCampaign', (req, res, next) => {
         res.status(500).send()
     })
 })
+
+router.post('/analyzeCampaign/italian', (req, res, next) => {
+    let azureRequestBody = {
+        "Inputs": {
+            "input1": {
+                "ColumnNames": [
+                    "auto_fb_post_mode",
+                    "goal",
+                    "title",
+                    "description",
+                    "has_beneficiary",
+                    "media_type",
+                    "visible_in_search",
+                    "title_len",
+                    "desc_len"
+                ],
+                "Values": [
+                    [
+                        req.body.autoFbPost ? 1 : 0,
+                        req.body.goal,
+                        req.body.title,
+                        req.body.description,
+                        req.body.hasBeneficiary ? 1 : 0,
+                        req.body.mediaType || 0,
+                        req.body.visibleInSearch ? 1 : 0,
+                        req.body.title.length,
+                        req.body.description.length,
+                    ],
+                ]
+            }
+        },
+        "GlobalParameters": {}
+    }
+    axios.post(process.env.AZURE_ML_URL_ITALIAN, azureRequestBody, {
+        headers: {
+            "Authorization": `Bearer ${process.env.AZURE_ML_API_KEY_ITALIAN}`
+        }
+    }).then((azureResponse) => {
+        const percentPerDay = (parseFloat(azureResponse.data.Results.output1.value.Values[0][0]) * 100).toString()
+        res.status(200).json(percentPerDay)
+    }).catch((err) => {
+        console.log(err)
+        res.status(500).send()
+    })
+})
+
+
+
+
 
 router.post('/becomeAdmin', (req, res, next) => {
 
