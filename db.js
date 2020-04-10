@@ -36,7 +36,7 @@ const runQuery = (query) => new Promise((resolve, reject) => {
 })
 
 
-const searchQuery = (title, description, firstName, lastName) => new Promise((resolve, reject) => {
+const searchQuery = (title, description, firstName, lastName, asc) => new Promise((resolve, reject) => {
     sequelize.query(
         `SELECT TOP 200 * FROM Campaigns WHERE 
         title like :title 
@@ -45,7 +45,8 @@ const searchQuery = (title, description, firstName, lastName) => new Promise((re
         AND
         user_first_name like :firstName
         AND
-        user_last_name like :lastName`,
+        user_last_name like :lastName 
+        ORDER BY current_amount ${JSON.parse(asc) ? "asc" : "desc"}`,
         {
             replacements: {
                 title: '%' + title + '%',

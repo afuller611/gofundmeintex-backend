@@ -52,7 +52,7 @@ router.get('/campaign/:campaignId', async (req, res, next) => {
 
 //Get Campaigns based on search parameters
 router.post('/searchCampaigns', (req, res, next) => {
-    searchQuery(req.body.title || "", req.body.description || "", req.body.firstName || "", req.body.lastName || "").then((response) => {
+    searchQuery(req.body.title || "", req.body.description || "", req.body.firstName || "", req.body.lastName || "", req.body.asc).then((response) => {
         res.status(200).json(response)
     }).catch((err) => {
         console.log(err)
