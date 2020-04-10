@@ -84,7 +84,7 @@ router.post('/analyzeCampaign/italian', (req, res, next) => {
 //Give user admin rights so they can do searches
 router.post('/becomeAdmin', (req, res, next) => {
 
-    const body = `{"client_id":"gAOC1UuXf05qYgFvqKQfr12wgjXi79fM","client_secret":${process.env.AUTH0_CLIENT_SECRET},"audience":"https://gofundmeintex.auth0.com/api/v2/","grant_type":"client_credentials"}`
+    const body = `{"client_id":"gAOC1UuXf05qYgFvqKQfr12wgjXi79fM","client_secret": "${process.env.AUTH0_CLIENT_SECRET}","audience":"https://gofundmeintex.auth0.com/api/v2/","grant_type":"client_credentials"}`
 
     axios.post(`${process.env.AUTH0_DOMAIN}/oauth/token`, body, {
         headers: {
