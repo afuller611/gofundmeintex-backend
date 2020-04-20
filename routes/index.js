@@ -10,9 +10,9 @@ const lngDetector = new LanguageDetect();
 require('dotenv').config()
 
 
-router.get('/googleplaystore', async (req, res, next) => {
+router.post('/googleplaystore', async (req, res, next) => {
     try {
-        let appRating = analyzeGooglePlayStoreApp(req.body)
+        let appRating = await analyzeGooglePlayStoreApp(req.body)
         console.log(appRating)
         res.status(200).json(appRating)
     } catch (err) {
@@ -24,43 +24,38 @@ router.get('/googleplaystore', async (req, res, next) => {
 const analyzeGooglePlayStoreApp = (body) => {
     return new Promise((resolve, reject) => {
         let azureRequestBody = {
-            "Inputs": {
-                "input1": {
+                "Inputs": {
+                  "input1": {
                     "ColumnNames": [
-                        "Category",
-                        "Size",
-                        "Type",
-                        "Price",
-                        "Content Rating",
-                        "Genres",
-                        "Last Updated",
-                        "Current Ver",
-                        "Android Ver"
+                      "App",
+                      "Category",
+                      "Size",
+                      "Content Rating",
+                      "Genres",
+                      "Android Ver"
                     ],
                     "Values": [
-                        [
-                            body.category,
-                            body.size,
-                            body.type,
-                            body.price,
-                            body.contentRating,
-                            body.genres,
-                            body.lastUpdated,
-                            body.currentVersion,
-                            body.androidVersion,
-                        ],
+                      [
+                        body.name,
+                        body.category,
+                        body.size,
+                        body.contentRating,
+                        body.genres,
+                        body.androidVersion
+                      ]
                     ]
-                }
-            },
-            "GlobalParameters": {}
-        }
+                  }
+                },
+                "GlobalParameters": {}
+              }
+
         axios.post(process.env.AZURE_ML_GOOGLE_PLAY_URL, azureRequestBody, {
             headers: {
                 "Authorization": `Bearer ${process.env.AZURE_ML_GOOGLE_PLAY_API_KEY}`
             }
         }).then((azureResponse) => {
-            const percentPerDay = (parseFloat(azureResponse.data.Results.output1.value.Values[0][0]) * 100).toString()
-            resolve(percentPerDay)
+            const installs = (azureResponse.data.Results.output1.value.Values[0][0])
+            resolve(installs)
         }).catch((err) => {
             console.log(err)
             reject(err)
