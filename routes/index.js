@@ -13,7 +13,6 @@ require('dotenv').config()
 router.post('/googleplaystore', async (req, res, next) => {
     try {
         let appRating = await analyzeGooglePlayStoreApp(req.body)
-        console.log(appRating)
         res.status(200).json(appRating)
     } catch (err) {
         console.log(err)
@@ -22,54 +21,61 @@ router.post('/googleplaystore', async (req, res, next) => {
 })
 
 const analyzeGooglePlayStoreApp = (body) => {
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
         let azureRequestBody = {
-                "Inputs": {
-                  "input1": {
+            "Inputs": {
+                "input1": {
                     "ColumnNames": [
-                      "App",
-                      "Category",
-                      "Size",
-                      "Content Rating",
-                      "Genres",
-                      "Android Ver"
+                        "App",
+                        "Category",
+                        "Size",
+                        "Content Rating",
+                        "Genres",
+                        "Android Ver"
                     ],
                     "Values": [
-                      [
-                        body.name,
-                        body.category,
-                        body.size,
-                        body.contentRating,
-                        body.genres,
-                        body.androidVersion
-                      ]
+                        [
+                            body.name,
+                            body.category,
+                            body.size,
+                            body.contentRating,
+                            body.genres.join(";"),
+                            `${body.androidVersion} and up`
+                        ]
                     ]
-                  }
-                },
-                "GlobalParameters": {}
-              }
+                }
+            },
+            "GlobalParameters": {}
+        }
+        try {
+            const installsAzureResponse = await axios.post(process.env.AZURE_ML_GOOGLE_PLAY_URL, azureRequestBody, {
+                headers: {
+                    "Authorization": `Bearer ${process.env.AZURE_ML_GOOGLE_PLAY_API_KEY}`
+                }
+            })
+            const installs = (installsAzureResponse.data.Results.output1.value.Values[0][0])
 
-        axios.post(process.env.AZURE_ML_GOOGLE_PLAY_URL, azureRequestBody, {
-            headers: {
-                "Authorization": `Bearer ${process.env.AZURE_ML_GOOGLE_PLAY_API_KEY}`
-            }
-        }).then((azureResponse) => {
-            const installs = (azureResponse.data.Results.output1.value.Values[0][0])
-            resolve(installs)
-        }).catch((err) => {
+            const reviewsAzureResponse = await axios.post(process.env.AZURE_ML_GOOGLE_PLAY_URL_REVIEWS, azureRequestBody, {
+                headers: {
+                    "Authorization": `Bearer ${process.env.AZURE_ML_GOOGLE_PLAY_API_KEY_REVIEWS}`
+                }
+            })
+            const reviews = (reviewsAzureResponse.data.Results.output1.value.Values[0][0])
+
+            resolve({installs, reviews})
+        } catch (err) {
             console.log(err)
-            reject(err)
-        })
+        }
+       
     })
 }
 
 
 router.post('/addGooglePlayApp', async (req, res, next) => {
-    query = SQL`INSERT INTO GooglePlayStoreApps (App, Category, Rating, Reviews, Size, Installs, Type, Price, Content_Rating, Genres, Current_Ver, Android_Ver, days_since_update)
+    query = SQL`INSERT INTO GooglePlayStoreApps (ID, App, Category, Rating, Reviews, Size, Installs, Type, Price, Content_Rating, Genres, Current_Ver, Android_Ver, days_since_updated)
     VALUES
-    (${name}, ${category}, ${averageRating}, ${numReviews}, ${size}, ${numIntalls}, ${type}, ${price}, ${contentRating}, ${genres}, ${version}, ${androidVersion}, ${lastUpdated})`
-    runGoogleQuery(query).then((res) => {
-        console.log(res)
+    ((SELECT MAX(ID) + 1 FROM GooglePlayStoreApps), ${req.body.name}, ${req.body.category}, ${req.body.averageRating}, ${req.body.numReviews}, ${req.body.size}, ${req.body.numIntalls}, ${req.body.type}, ${req.body.price}, ${req.body.contentRating}, ${req.body.genres.join(";")}, ${req.body.version}, ${req.body.androidVersion + " and up"}, ${req.body.lastUpdated})`
+    runGoogleQuery(query).then((results) => {
         res.status(200).send("Done")
     }).catch((err) => {
         console.log(err)
