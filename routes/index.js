@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { runQuery, searchQuery } = require('../db.js')
+const { runGoogleQuery } = require('../googlePlaydb.js')
 const SQL = require('sql-template-strings')
 const SqlString = require('sqlstring')
 const axios = require('axios')
@@ -67,6 +68,18 @@ const analyzeGooglePlayStoreApp = (body) => {
     })
 }
 
+
+router.post('/addGooglePlayApp', async (req, res, next) => {
+    query = SQL`INSERT INTO GooglePlayStoreApps (App, Category, Rating, Reviews, Size, Installs, Type, Price, Content_Rating, Genres, Current_Ver, Android_Ver, days_since_update)
+    VALUES
+    (${name}, ${category}, ${averageRating}, ${numReviews}, ${size}, ${numIntalls}, ${type}, ${price}, ${contentRating}, ${genres}, ${version}, ${androidVersion}, ${lastUpdated})`
+    runGoogleQuery(query).then((res) => {
+        console.log(res)
+        res.status(200).send("Done")
+    }).catch((err) => {
+        console.log(err)
+    })
+})
 
 //Get all campaign details based on campaign ID
 router.get('/campaign/:campaignId', async (req, res, next) => {
